@@ -60,15 +60,16 @@ public class ClientHttpRequestFactorySelector {
 		Properties properties = System.getProperties();
 		String proxyHost = properties.getProperty("http.proxyHost");
 		int proxyPort = properties.containsKey("http.proxyPort") ? Integer.valueOf(properties.getProperty("http.proxyPort")) : 80;
-		if (HTTP_COMPONENTS_AVAILABLE) {
+/*		if (HTTP_COMPONENTS_AVAILABLE) {
 			return HttpComponentsClientRequestFactoryCreator.createRequestFactory(proxyHost, proxyPort);
 		} else {
-			SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+			SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();*/
+			SimpleClientHttpRequestFactory requestFactory = new GAESimpleClientHttpRequestFactory();
 			if (proxyHost != null) {
 				requestFactory.setProxy(new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, proxyPort)));
 			}
 			return requestFactory;
-		}
+//		}
 	}
 	
 	/**
