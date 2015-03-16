@@ -64,11 +64,4 @@ public class ProviderSignInUtils {
 			sessionStrategy.removeAttribute(request, ProviderSignInAttempt.SESSION_ATTRIBUTE);
 		}		
 	}
-
-	// internal helpers
-	
-	private static ProviderSignInAttempt getProviderUserSignInAttempt(RequestAttributes request) {
-		return (ProviderSignInAttempt) request.getAttribute(ProviderSignInAttempt.SESSION_ATTRIBUTE, RequestAttributes.SCOPE_SESSION);
-	}
-	
 }

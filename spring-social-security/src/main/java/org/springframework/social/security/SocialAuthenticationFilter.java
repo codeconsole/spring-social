@@ -40,9 +40,12 @@ import org.springframework.social.connect.ConnectionData;
 import org.springframework.social.connect.ConnectionRepository;
 import org.springframework.social.connect.UsersConnectionRepository;
 import org.springframework.social.connect.web.ProviderSignInAttempt;
+import org.springframework.social.connect.web.SessionStrategy;
+import org.springframework.social.connect.web.HttpSessionSessionStrategy;
 import org.springframework.social.security.provider.SocialAuthenticationService;
 import org.springframework.util.Assert;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import org.springframework.web.context.request.ServletWebRequest;
 
 /**
  * Filter for handling the provider sign-in flow within the Spring Security filter chain.
@@ -67,6 +70,8 @@ public class SocialAuthenticationFilter extends AbstractAuthenticationProcessing
 	private UsersConnectionRepository usersConnectionRepository;
 
 	private SimpleUrlAuthenticationFailureHandler delegateAuthenticationFailureHandler;
+	
+	private SessionStrategy sessionStrategy = new HttpSessionSessionStrategy();	
 
 	public SocialAuthenticationFilter(AuthenticationManager authManager, UserIdSource userIdSource, UsersConnectionRepository usersConnectionRepository, SocialAuthenticationServiceLocator authServiceLocator) {
 		super("/auth");
@@ -131,6 +136,15 @@ public class SocialAuthenticationFilter extends AbstractAuthenticationProcessing
 		} else {
 			throw new IllegalStateException("can't set postFailureUrl on unknown failureHandler, type is " + failureHandler.getClass().getName());
 		}
+	}
+	
+	/**
+	 * Sets a strategy to use when persisting information that is to survive past the boundaries of a request.
+	 * The default strategy is to set the data as attributes in the HTTP Session.
+	 * @param sessionStrategy the session strategy.
+	 */
+	public void setSessionStrategy(SessionStrategy sessionStrategy) {
+		this.sessionStrategy = sessionStrategy;
 	}
 
 	public UsersConnectionRepository getUsersConnectionRepository() {
@@ -306,7 +320,8 @@ public class SocialAuthenticationFilter extends AbstractAuthenticationProcessing
 			// connection unknown, register new user?
 			if (signupUrl != null) {
 				// store ConnectionData in session and redirect to register page
-				addSignInAttempt(request.getSession(), token.getConnection());
+				ProviderSignInAttempt signInAttempt = new ProviderSignInAttempt(token.getConnection(), authServiceLocator, usersConnectionRepository);
+				sessionStrategy.setAttribute(new ServletWebRequest(request), ProviderSignInAttempt.SESSION_ATTRIBUTE, signInAttempt);
 				throw new SocialAuthenticationRedirectException(buildSignupUrl(request));
 			}
 			throw e;
@@ -330,10 +345,6 @@ public class SocialAuthenticationFilter extends AbstractAuthenticationProcessing
 			ConnectionRepository repo = getUsersConnectionRepository().createConnectionRepository(userId);
 			repo.updateConnection(connection);
 		}
-	}
-	
-	private void addSignInAttempt(HttpSession session, Connection<?> connection) {
-		session.setAttribute(ProviderSignInAttempt.SESSION_ATTRIBUTE, new ProviderSignInAttempt(connection, authServiceLocator, usersConnectionRepository));
 	}
 
 	private static final String DEFAULT_FAILURE_URL = "/signin";
