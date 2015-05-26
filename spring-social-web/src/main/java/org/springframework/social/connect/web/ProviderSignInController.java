@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 the original author or authors.
+ * Copyright 2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -173,10 +173,10 @@ public class ProviderSignInController implements InitializingBean {
 	 */
 	@RequestMapping(value="/{providerId}", method=RequestMethod.POST)
 	public RedirectView signIn(@PathVariable String providerId, NativeWebRequest request) {
-		ConnectionFactory<?> connectionFactory = connectionFactoryLocator.getConnectionFactory(providerId);
-		MultiValueMap<String, String> parameters = new LinkedMultiValueMap<String, String>();
-		preSignIn(connectionFactory, parameters, request);
 		try {
+			ConnectionFactory<?> connectionFactory = connectionFactoryLocator.getConnectionFactory(providerId);
+			MultiValueMap<String, String> parameters = new LinkedMultiValueMap<String, String>();
+			preSignIn(connectionFactory, parameters, request);
 			return new RedirectView(connectSupport.buildOAuthUrl(connectionFactory, request, parameters));
 		} catch (Exception e) {
 			logger.error("Exception while building authorization URL: ", e);
@@ -281,7 +281,7 @@ public class ProviderSignInController implements InitializingBean {
 	private RedirectView handleSignIn(Connection<?> connection, ConnectionFactory<?> connectionFactory, NativeWebRequest request) {
 		List<String> userIds = usersConnectionRepository.findUserIdsWithConnection(connection);
 		if (userIds.size() == 0) {
-			ProviderSignInAttempt signInAttempt = new ProviderSignInAttempt(connection, connectionFactoryLocator, usersConnectionRepository);
+			ProviderSignInAttempt signInAttempt = new ProviderSignInAttempt(connection);
 			sessionStrategy.setAttribute(request, ProviderSignInAttempt.SESSION_ATTRIBUTE, signInAttempt);
 			return redirect(signUpUrl);
 		} else if (userIds.size() == 1) {

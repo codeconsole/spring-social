@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 the original author or authors.
+ * Copyright 2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -73,8 +73,10 @@ public class SocialAuthenticationFilter extends AbstractAuthenticationProcessing
 	
 	private SessionStrategy sessionStrategy = new HttpSessionSessionStrategy();	
 
+	private String filterProcessesUrl = DEFAULT_FILTER_PROCESSES_URL;
+
 	public SocialAuthenticationFilter(AuthenticationManager authManager, UserIdSource userIdSource, UsersConnectionRepository usersConnectionRepository, SocialAuthenticationServiceLocator authServiceLocator) {
-		super("/auth");
+		super(DEFAULT_FILTER_PROCESSES_URL);
 		setAuthenticationManager(authManager);
 		this.userIdSource = userIdSource;
 		this.usersConnectionRepository = usersConnectionRepository;
@@ -234,6 +236,13 @@ public class SocialAuthenticationFilter extends AbstractAuthenticationProcessing
 		repo.addConnection(connection);
 		return connection;
 	}
+	
+	@SuppressWarnings("deprecation")
+	@Override
+	public void setFilterProcessesUrl(String filterProcessesUrl) {
+		super.setFilterProcessesUrl(filterProcessesUrl);
+		this.filterProcessesUrl = filterProcessesUrl;
+	}
 
 	// private helpers
 	private Authentication getAuthentication() {
@@ -264,7 +273,6 @@ public class SocialAuthenticationFilter extends AbstractAuthenticationProcessing
 		}		
 	}	
 	
-	@SuppressWarnings("deprecation")
 	private String getRequestedProviderId(HttpServletRequest request) {
 		String uri = request.getRequestURI();
 		int pathParamIndex = uri.indexOf(';');
@@ -278,10 +286,10 @@ public class SocialAuthenticationFilter extends AbstractAuthenticationProcessing
 		uri = uri.substring(request.getContextPath().length());
 
 		// remaining uri must start with filterProcessesUrl
-		if (!uri.startsWith(getFilterProcessesUrl())) {
+		if (!uri.startsWith(filterProcessesUrl)) {
 			return null;
 		}
-		uri = uri.substring(getFilterProcessesUrl().length());
+		uri = uri.substring(filterProcessesUrl.length());
 
 		// expect /filterprocessesurl/provider, not /filterprocessesurlproviderr
 		if (uri.startsWith("/")) {
@@ -320,8 +328,7 @@ public class SocialAuthenticationFilter extends AbstractAuthenticationProcessing
 			// connection unknown, register new user?
 			if (signupUrl != null) {
 				// store ConnectionData in session and redirect to register page
-				ProviderSignInAttempt signInAttempt = new ProviderSignInAttempt(token.getConnection(), authServiceLocator, usersConnectionRepository);
-				sessionStrategy.setAttribute(new ServletWebRequest(request), ProviderSignInAttempt.SESSION_ATTRIBUTE, signInAttempt);
+				sessionStrategy.setAttribute(new ServletWebRequest(request), ProviderSignInAttempt.SESSION_ATTRIBUTE, new ProviderSignInAttempt(token.getConnection()));
 				throw new SocialAuthenticationRedirectException(buildSignupUrl(request));
 			}
 			throw e;
@@ -348,5 +355,7 @@ public class SocialAuthenticationFilter extends AbstractAuthenticationProcessing
 	}
 
 	private static final String DEFAULT_FAILURE_URL = "/signin";
+	
+	private static final String DEFAULT_FILTER_PROCESSES_URL = "/auth";
 
 }

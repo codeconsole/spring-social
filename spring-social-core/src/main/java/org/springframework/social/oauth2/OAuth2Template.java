@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 the original author or authors.
+ * Copyright 2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,9 +30,11 @@ import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.social.support.ClientHttpRequestFactorySelector;
 import org.springframework.social.support.FormMapHttpMessageConverter;
+import org.springframework.social.support.LoggingErrorHandler;
 import org.springframework.util.Assert;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
 /**
@@ -95,7 +97,7 @@ public class OAuth2Template implements OAuth2Operations {
 	
 	/**
 	 * Set to true to pass client credentials to the provider as parameters instead of using HTTP Basic authentication.
-	 * @param useParametersForClientAuthentication
+	 * @param useParametersForClientAuthentication true if the client credentials should be passed as parameters; false if passed via HTTP Basic
 	 */
 	public void setUseParametersForClientAuthentication(boolean useParametersForClientAuthentication) {
 		this.useParametersForClientAuthentication = useParametersForClientAuthentication;
@@ -104,6 +106,7 @@ public class OAuth2Template implements OAuth2Operations {
 	/**
 	 * Set the request factory on the underlying RestTemplate.
 	 * This can be used to plug in a different HttpClient to do things like configure custom SSL settings.
+	 * @param requestFactory the request factory used by the underlying RestTemplate
 	 */
 	public void setRequestFactory(ClientHttpRequestFactory requestFactory) {
 		Assert.notNull(requestFactory, "The requestFactory property cannot be null");
@@ -200,7 +203,8 @@ public class OAuth2Template implements OAuth2Operations {
 	 * Creates the {@link RestTemplate} used to communicate with the provider's OAuth 2 API.
 	 * This implementation creates a RestTemplate with a minimal set of HTTP message converters ({@link FormHttpMessageConverter} and {@link MappingJackson2HttpMessageConverter}).
 	 * May be overridden to customize how the RestTemplate is created.
-	 * For example, if the provider returns data in some format other than JSON for form-encoded, you might override to register an appropriate message converter. 
+	 * For example, if the provider returns data in some format other than JSON for form-encoded, you might override to register an appropriate message converter.
+	 * @return a {@link RestTemplate} used to communicate with the provider's OAuth 2 API 
 	 */
 	protected RestTemplate createRestTemplate() {
 		ClientHttpRequestFactory requestFactory = ClientHttpRequestFactorySelector.getRequestFactory();
@@ -210,6 +214,7 @@ public class OAuth2Template implements OAuth2Operations {
 		converters.add(new FormMapHttpMessageConverter());
 		converters.add(new MappingJackson2HttpMessageConverter());
 		restTemplate.setMessageConverters(converters);
+		restTemplate.setErrorHandler(new LoggingErrorHandler());
 		if (!useParametersForClientAuthentication) {
 			List<ClientHttpRequestInterceptor> interceptors = restTemplate.getInterceptors();
 			if (interceptors == null) {   // defensively initialize list if it is null. (See SOCIAL-430)
@@ -264,7 +269,6 @@ public class OAuth2Template implements OAuth2Operations {
 	
 	// internal helpers
 
-	@SuppressWarnings("deprecation") 
 	private String buildAuthUrl(String baseAuthUrl, GrantType grantType, OAuth2Parameters parameters) {
 		StringBuilder authUrl = new StringBuilder(baseAuthUrl);
 		if (grantType == GrantType.AUTHORIZATION_CODE) {
@@ -276,7 +280,11 @@ public class OAuth2Template implements OAuth2Operations {
 			Entry<String, List<String>> param = additionalParams.next();
 			String name = formEncode(param.getKey());
 			for (Iterator<String> values = param.getValue().iterator(); values.hasNext();) {
-				authUrl.append('&').append(name).append('=').append(formEncode(values.next()));
+				authUrl.append('&').append(name);
+				String value = values.next();
+				if (StringUtils.hasLength(value)) {
+					authUrl.append('=').append(formEncode(value));
+				}
 			}
 		}
 		return authUrl.toString();		
