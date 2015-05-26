@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 the original author or authors.
+ * Copyright 2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -85,6 +85,8 @@ public class ConnectController implements InitializingBean {
 	private String viewPath = "connect/";
 
 	private SessionStrategy sessionStrategy = new HttpSessionSessionStrategy();
+
+	private String applicationUrl = null;
 	
 	/**
 	 * Constructs a ConnectController.
@@ -140,7 +142,7 @@ public class ConnectController implements InitializingBean {
 	 * @param applicationUrl the application URL value
 	 */
 	public void setApplicationUrl(String applicationUrl) {
-		connectSupport.setApplicationUrl(applicationUrl);
+		this.applicationUrl = applicationUrl;
 	}
 	
 	/**
@@ -394,6 +396,9 @@ public class ConnectController implements InitializingBean {
 	// From InitializingBean
 	public void afterPropertiesSet() throws Exception {
 		this.connectSupport = new ConnectSupport(sessionStrategy);
+		if (applicationUrl != null) {
+			this.connectSupport.setApplicationUrl(applicationUrl);
+		}
 	}
 
 	// internal helpers
@@ -496,10 +501,10 @@ public class ConnectController implements InitializingBean {
 		}
 	}
 	
-	private static final String DUPLICATE_CONNECTION_ATTRIBUTE = "social_addConnection_duplicate";
+	protected static final String DUPLICATE_CONNECTION_ATTRIBUTE = "social_addConnection_duplicate";
 	
-	private static final String PROVIDER_ERROR_ATTRIBUTE = "social_provider_error";
+	protected static final String PROVIDER_ERROR_ATTRIBUTE = "social_provider_error";
 
-	private static final String AUTHORIZATION_ERROR_ATTRIBUTE = "social_authorization_error";
+	protected static final String AUTHORIZATION_ERROR_ATTRIBUTE = "social_authorization_error";
 
 }
